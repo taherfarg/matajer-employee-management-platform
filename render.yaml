@@ -64,7 +64,8 @@ services:
   - type: web
     name: ems-web
     runtime: static
-    plan: free
+    # No `plan` here on purpose: static sites are always free and Render rejects
+    # a plan field on them ("no such plan free for service type web").
     rootDir: "Employee Management Platform FrontEnd"
     buildCommand: npm ci && npm run build
     staticPublishPath: ./dist
