@@ -43,7 +43,20 @@ const envSchema = z.object({
   RATE_LIMIT_API_MAX: z.coerce.number().int().positive().default(300),
 });
 
-const parsed = envSchema.safeParse(process.env);
+/**
+ * Blank values are treated as unset.
+ *
+ * Hosting platforms render an untouched variable as `""` rather than omitting
+ * it, and Zod only applies a `.default()` to `undefined`. Without this, leaving
+ * a field empty in a deploy dashboard sends `""` straight into `.min(8)` and the
+ * process dies at boot with a message that reads like a code fault rather than a
+ * missing setting.
+ */
+const withoutBlanks = Object.fromEntries(
+  Object.entries(process.env).filter(([, value]) => value !== ''),
+);
+
+const parsed = envSchema.safeParse(withoutBlanks);
 
 if (!parsed.success) {
   const issues = parsed.error.issues
