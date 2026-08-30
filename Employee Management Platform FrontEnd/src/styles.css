@@ -338,7 +338,7 @@ table { border-collapse: collapse; }
 .reset-button { color: #747c78; display: flex; align-items: center; gap: 8px; font-size: 9px; padding: 10px 9px; margin-bottom: 7px; }
 .reset-button:hover { color: white; }
 .sidebar-user { padding: 13px 8px 2px; border-top: 1px solid rgba(255,255,255,.1); display: flex; align-items: center; gap: 9px; }
-.sidebar-user > span { display: flex; min-width: 0; flex: 1; flex-direction: column; gap: 2px; }
+.sidebar-user > span:not(.avatar) { display: flex; min-width: 0; flex: 1; flex-direction: column; gap: 2px; }
 .sidebar-user strong { font-size: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .sidebar-user small { color: #727a76; font-size: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .sidebar-user > button { width: 31px; height: 31px; display: grid; place-items: center; color: #707873; border-radius: 8px; }
@@ -1310,4 +1310,18 @@ table { border-collapse: collapse; }
 @media (max-width: 620px) {
   .letter-toolbar { flex-direction: column; align-items: stretch; }
   .letter-body { padding: 18px; font-size: 12.5px; }
+}
+
+/* --- Avatar centring -------------------------------------------------------
+   The avatar is a <span>, so a parent rule like `.parent > span { display:flex;
+   flex-direction:column }` silently captures it and pushes the initials off
+   centre. These declarations pin the avatar's own layout so it stays centred
+   wherever it is nested. line-height:1 makes the grid centre the glyphs rather
+   than a line box padded by the font's ascender and descender metrics. */
+.avatar {
+  display: inline-grid !important;
+  place-items: center;
+  line-height: 1;
+  text-align: center;
+  overflow: hidden;
 }
