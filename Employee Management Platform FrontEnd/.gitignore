@@ -1,0 +1,12 @@
+node_modules/
+dist/
+
+# Secrets - .env.example is the tracked template
+.env
+.env.*
+!.env.example
+
+.playwright-cli/
+output/
+.DS_Store
+*.local

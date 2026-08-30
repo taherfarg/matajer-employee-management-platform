@@ -1,0 +1,28 @@
+# Repository-wide ignores. Each project also has its own .gitignore; this is the
+# backstop so a secret can never be committed from either side.
+
+# Secrets — never commit. .env.example is the tracked template.
+.env
+.env.*
+!.env.example
+
+# Dependencies and build output
+node_modules/
+dist/
+build/
+*.tsbuildinfo
+
+# Tooling scratch
+.playwright-cli/
+output/
+coverage/
+.vite/
+*.log
+npm-debug.log*
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp

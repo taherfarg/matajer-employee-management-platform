@@ -1,0 +1,599 @@
+// Employee Management Platform - data model
+//
+// Design notes worth knowing before reading:
+//
+//  1. LegalEntity is the organisational root. Every employee points at exactly
+//     one, and leave policy, public holidays, working week and currency all hang
+//     off it. Adding a fourth country is inserting a row, not changing code.
+//
+//  2. User (authentication) is deliberately separate from Employee (HR record).
+//     Not every employee needs a login, and an HR admin need not be an employee.
+//
+//  3. Compensation lives in its own table rather than as columns on Employee.
+//     Salary is the most sensitive field in the system - keeping it out of the
+//     employee row means the default employee serializer physically cannot leak
+//     it, and we get salary history for free.
+//
+//  4. Requests use a supertype (Request) plus one typed detail table per kind.
+//     The unified admin inbox queries a single table, while leave still gets
+//     real date columns for calendars and balance arithmetic.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Enums
+// ---------------------------------------------------------------------------
+
+enum Role {
+  ADMIN // full access across every legal entity
+  HR_ADMIN // same capabilities, optionally scoped to one legal entity
+  MANAGER // direct reports only, never compensation
+  EMPLOYEE // own record only
+}
+
+enum EmployeeStatus {
+  PROBATION
+  ACTIVE
+  ON_LEAVE
+  NOTICE_PERIOD
+  OFFBOARDED
+}
+
+enum EmploymentType {
+  FULL_TIME
+  PART_TIME
+  CONTRACT
+  INTERN
+}
+
+enum ContractType {
+  UNLIMITED
+  LIMITED
+}
+
+enum WorkMode {
+  ONSITE
+  HYBRID
+  REMOTE
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  UNDISCLOSED
+}
+
+enum PayFrequency {
+  MONTHLY
+  BIWEEKLY
+  ANNUAL
+}
+
+enum RequestType {
+  LEAVE
+  DOCUMENT
+  PROFILE_CHANGE
+}
+
+enum RequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+enum DocumentRequestType {
+  EMPLOYMENT_CERTIFICATE
+  SALARY_CERTIFICATE
+  EXPERIENCE_LETTER
+  NOC_TRAVEL
+  VISA_LETTER
+  BANK_ACCOUNT_LETTER
+}
+
+enum DocumentCategory {
+  CONTRACT
+  IDENTIFICATION
+  VISA_PERMIT
+  CERTIFICATE
+  LETTER
+  PAYSLIP
+  OTHER
+}
+
+enum EmploymentEventType {
+  HIRED
+  PROBATION_COMPLETED
+  PROMOTION
+  TRANSFER
+  MANAGER_CHANGE
+  COMPENSATION_CHANGE
+  STATUS_CHANGE
+  CONTRACT_RENEWAL
+  OFFBOARDED
+}
+
+enum NotificationType {
+  REQUEST_SUBMITTED
+  REQUEST_APPROVED
+  REQUEST_REJECTED
+  REQUEST_CANCELLED
+  DOCUMENT_ISSUED
+  PROFILE_UPDATED
+  WELCOME
+}
+
+enum AuditAction {
+  CREATE
+  UPDATE
+  DELETE
+  APPROVE
+  REJECT
+  CANCEL
+  LOGIN
+  LOGIN_FAILED
+  LOGOUT
+  PASSWORD_CHANGE
+  VIEW_SENSITIVE
+}
+
+// ---------------------------------------------------------------------------
+// Organisation
+// ---------------------------------------------------------------------------
+
+model LegalEntity {
+  id                 String   @id @default(cuid())
+  code               String   @unique // e.g. MTJ-AE
+  name               String // display name
+  legalName          String // registered name
+  registrationNumber String
+  countryCode        String   @db.Char(2) // ISO 3166-1 alpha-2
+  countryName        String
+  city               String
+  addressLine        String?
+  currency           String   @db.Char(3) // ISO 4217
+  timezone           String
+  /// Working days as day-of-week indexes, 0 = Sunday .. 6 = Saturday.
+  /// UAE runs Mon-Fri [1,2,3,4,5]; KSA and Egypt run Sun-Thu [0,1,2,3,4].
+  workWeek           Int[]
+  weeklyHours        Decimal  @db.Decimal(4, 1)
+  probationMonths    Int      @default(6)
+  noticePeriodDays   Int      @default(30)
+  establishedOn      DateTime @db.Date
+  isActive           Boolean  @default(true)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  employees   Employee[]
+  leaveTypes  LeaveType[]
+  holidays    Holiday[]
+  requests    Request[]
+  scopedUsers User[]      @relation("UserLegalEntityScope")
+
+  @@map("legal_entities")
+}
+
+model Department {
+  id          String   @id @default(cuid())
+  code        String   @unique
+  name        String
+  description String?
+  headId      String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  head      Employee?  @relation("DepartmentHead", fields: [headId], references: [id], onDelete: SetNull)
+  employees Employee[] @relation("EmployeeDepartment")
+
+  @@map("departments")
+}
+
+// ---------------------------------------------------------------------------
+// People
+// ---------------------------------------------------------------------------
+
+model Employee {
+  id             String  @id @default(cuid())
+  employeeNumber String  @unique // e.g. AE-0007
+  firstName      String
+  lastName       String
+  preferredName  String?
+
+  // Contact
+  workEmail     String  @unique
+  personalEmail String?
+  phone         String?
+
+  // Personal - only ever exposed to the employee themselves and to HR/admins.
+  dateOfBirth              DateTime? @db.Date
+  gender                   Gender?
+  nationality              String?
+  addressLine              String?
+  city                     String?
+  country                  String?
+  emergencyContactName     String?
+  emergencyContactPhone    String?
+  emergencyContactRelation String?
+  avatarUrl                String?
+
+  // Placement
+  legalEntityId String
+  departmentId  String?
+  managerId     String?
+
+  // Employment - the current snapshot. Every change also writes an EmploymentEvent.
+  jobTitle         String
+  employmentType   EmploymentType @default(FULL_TIME)
+  contractType     ContractType   @default(UNLIMITED)
+  workMode         WorkMode       @default(ONSITE)
+  status           EmployeeStatus @default(PROBATION)
+  hireDate         DateTime       @db.Date
+  probationEndDate DateTime?      @db.Date
+  contractEndDate  DateTime?      @db.Date
+  exitDate         DateTime?      @db.Date
+  exitReason       String?
+  noticePeriodDays Int            @default(30)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  legalEntity      LegalEntity          @relation(fields: [legalEntityId], references: [id], onDelete: Restrict)
+  department       Department?          @relation("EmployeeDepartment", fields: [departmentId], references: [id], onDelete: SetNull)
+  manager          Employee?            @relation("EmployeeManager", fields: [managerId], references: [id], onDelete: SetNull)
+  directReports    Employee[]           @relation("EmployeeManager")
+  headOfDepartment Department[]         @relation("DepartmentHead")
+  user             User?
+  compensation     CompensationRecord[]
+  employmentEvents EmploymentEvent[]
+  documents        Document[]
+  leaveBalances    LeaveBalance[]
+  requests         Request[]
+
+  @@index([legalEntityId])
+  @@index([departmentId])
+  @@index([managerId])
+  @@index([status])
+  @@index([lastName, firstName])
+  @@map("employees")
+}
+
+model User {
+  id                  String    @id @default(cuid())
+  email               String    @unique
+  passwordHash        String
+  role                Role      @default(EMPLOYEE)
+  employeeId          String?   @unique
+  /// When set, an HR_ADMIN only sees employees of this legal entity.
+  /// Null means every legal entity - how ADMIN accounts are configured.
+  scopedLegalEntityId String?
+  isActive            Boolean   @default(true)
+  mustChangePassword  Boolean   @default(false)
+  lastLoginAt         DateTime?
+  failedLoginAttempts Int       @default(0)
+  lockedUntil         DateTime?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  employee          Employee?      @relation(fields: [employeeId], references: [id], onDelete: SetNull)
+  scopedLegalEntity LegalEntity?   @relation("UserLegalEntityScope", fields: [scopedLegalEntityId], references: [id], onDelete: SetNull)
+  refreshTokens     RefreshToken[]
+  notifications     Notification[]
+  auditLogs         AuditLog[]
+  decidedRequests   Request[]      @relation("RequestDecidedBy")
+
+  @@index([role])
+  @@map("users")
+}
+
+model RefreshToken {
+  id         String    @id @default(cuid())
+  userId     String
+  /// SHA-256 of the token. The raw token is never stored.
+  tokenHash  String    @unique
+  expiresAt  DateTime
+  revokedAt  DateTime?
+  replacedBy String?
+  userAgent  String?
+  ipAddress  String?
+  createdAt  DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("refresh_tokens")
+}
+
+// ---------------------------------------------------------------------------
+// Employment record: compensation history + timeline
+// ---------------------------------------------------------------------------
+
+model CompensationRecord {
+  id                 String       @id @default(cuid())
+  employeeId         String
+  effectiveFrom      DateTime     @db.Date
+  effectiveTo        DateTime?    @db.Date
+  baseSalary         Decimal      @db.Decimal(12, 2)
+  currency           String       @db.Char(3)
+  payFrequency       PayFrequency @default(MONTHLY)
+  housingAllowance   Decimal      @default(0) @db.Decimal(12, 2)
+  transportAllowance Decimal      @default(0) @db.Decimal(12, 2)
+  otherAllowances    Decimal      @default(0) @db.Decimal(12, 2)
+  variablePayPercent Decimal      @default(0) @db.Decimal(5, 2)
+  changeReason       String
+  note               String?
+  isCurrent          Boolean      @default(true)
+  createdById        String?
+  createdAt          DateTime     @default(now())
+
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@index([employeeId, effectiveFrom])
+  @@index([employeeId, isCurrent])
+  @@map("compensation_records")
+}
+
+model EmploymentEvent {
+  id            String              @id @default(cuid())
+  employeeId    String
+  type          EmploymentEventType
+  effectiveDate DateTime            @db.Date
+  title         String
+  description   String?
+  previousValue Json?
+  newValue      Json?
+  createdById   String?
+  createdAt     DateTime            @default(now())
+
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@index([employeeId, effectiveDate])
+  @@map("employment_events")
+}
+
+model Document {
+  id             String           @id @default(cuid())
+  employeeId     String
+  category       DocumentCategory
+  title          String
+  fileName       String
+  fileUrl        String
+  mimeType       String           @default("application/pdf")
+  sizeBytes      Int              @default(0)
+
+  /// Letter text for HR letters issued from a document request. Held as text
+  /// rather than a rendered file so it stays searchable and auditable, and so
+  /// the same record can be re-rendered to PDF later without regeneration.
+  contentEn      String?
+  contentAr      String?
+  /// True when the letter body was drafted by the language model rather than
+  /// the deterministic template. Recorded so HR always knows what it is
+  /// reviewing before signing.
+  isAiGenerated  Boolean          @default(false)
+
+  issuedOn       DateTime?        @db.Date
+  /// Drives the expiring-documents management alert (visas, passports, permits).
+  expiresOn      DateTime?        @db.Date
+  isConfidential Boolean          @default(false)
+  uploadedById   String?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  employee         Employee               @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  issuedForRequest DocumentRequestDetail? @relation("IssuedDocument")
+
+  @@index([employeeId])
+  @@index([expiresOn])
+  @@map("documents")
+}
+
+// ---------------------------------------------------------------------------
+// Leave policy - configured per legal entity
+// ---------------------------------------------------------------------------
+
+model LeaveType {
+  id                    String  @id @default(cuid())
+  /// Null means the policy applies to every legal entity.
+  legalEntityId         String?
+  code                  String
+  name                  String
+  description           String?
+  colorHex              String  @default("#64748b")
+  annualEntitlementDays Decimal @db.Decimal(5, 2)
+  isPaid                Boolean @default(true)
+  requiresAttachment    Boolean @default(false)
+  allowsHalfDay         Boolean @default(true)
+  minNoticeDays         Int     @default(0)
+  maxConsecutiveDays    Int?
+  carryOverMaxDays      Decimal @default(0) @db.Decimal(5, 2)
+  /// Null = available to everyone; otherwise restricted (e.g. maternity leave).
+  restrictedToGender    Gender?
+  isActive              Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  legalEntity   LegalEntity?         @relation(fields: [legalEntityId], references: [id], onDelete: Cascade)
+  balances      LeaveBalance[]
+  leaveRequests LeaveRequestDetail[]
+
+  @@unique([legalEntityId, code])
+  @@map("leave_types")
+}
+
+model Holiday {
+  id                  String   @id @default(cuid())
+  legalEntityId       String
+  name                String
+  date                DateTime @db.Date
+  isRecurringAnnually Boolean  @default(false)
+  createdAt           DateTime @default(now())
+
+  legalEntity LegalEntity @relation(fields: [legalEntityId], references: [id], onDelete: Cascade)
+
+  @@unique([legalEntityId, date])
+  @@index([date])
+  @@map("holidays")
+}
+
+model LeaveBalance {
+  id              String  @id @default(cuid())
+  employeeId      String
+  leaveTypeId     String
+  year            Int
+  entitledDays    Decimal @db.Decimal(5, 2)
+  carriedOverDays Decimal @default(0) @db.Decimal(5, 2)
+  usedDays        Decimal @default(0) @db.Decimal(5, 2)
+  /// Days locked by requests that are submitted but not yet decided.
+  pendingDays     Decimal @default(0) @db.Decimal(5, 2)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  employee  Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  leaveType LeaveType @relation(fields: [leaveTypeId], references: [id], onDelete: Cascade)
+
+  @@unique([employeeId, leaveTypeId, year])
+  @@index([employeeId, year])
+  @@map("leave_balances")
+}
+
+// ---------------------------------------------------------------------------
+// Request workflow
+// ---------------------------------------------------------------------------
+
+model Request {
+  id        String        @id @default(cuid())
+  reference String        @unique // human-facing, e.g. LV-2026-0031
+  type      RequestType
+  status    RequestStatus @default(PENDING)
+
+  employeeId String
+  /// Snapshot of the requester legal entity so admin scoping and reporting stay
+  /// correct even if the employee later transfers to another entity.
+  legalEntityId String
+
+  submittedAt  DateTime  @default(now())
+  decidedAt    DateTime?
+  decidedById  String?
+  decisionNote String?
+  cancelledAt  DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  employee    Employee    @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  legalEntity LegalEntity @relation(fields: [legalEntityId], references: [id], onDelete: Restrict)
+  decidedBy   User?       @relation("RequestDecidedBy", fields: [decidedById], references: [id], onDelete: SetNull)
+
+  leaveDetail         LeaveRequestDetail?
+  documentDetail      DocumentRequestDetail?
+  profileChangeDetail ProfileChangeRequestDetail?
+
+  @@index([status, type])
+  @@index([employeeId, status])
+  @@index([legalEntityId, status])
+  @@index([submittedAt])
+  @@map("requests")
+}
+
+model LeaveRequestDetail {
+  requestId     String   @id
+  leaveTypeId   String
+  startDate     DateTime @db.Date
+  endDate       DateTime @db.Date
+  halfDayStart  Boolean  @default(false)
+  halfDayEnd    Boolean  @default(false)
+  /// Computed from the legal entity working week minus its public holidays.
+  workingDays   Decimal  @db.Decimal(5, 2)
+  reason        String
+  handoverNotes String?
+  attachmentUrl String?
+
+  request   Request   @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  leaveType LeaveType @relation(fields: [leaveTypeId], references: [id], onDelete: Restrict)
+
+  @@index([startDate, endDate])
+  @@map("leave_request_details")
+}
+
+model DocumentRequestDetail {
+  requestId        String              @id
+  documentType     DocumentRequestType
+  purpose          String
+  addressedTo      String?
+  /// Whether the generated letter may state the salary. Requesting it is the
+  /// choice of the employee; the letter is still produced by HR.
+  includeSalary    Boolean             @default(false)
+  language         String              @default("EN")
+  issuedDocumentId String?             @unique
+
+  request        Request   @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  issuedDocument Document? @relation("IssuedDocument", fields: [issuedDocumentId], references: [id], onDelete: SetNull)
+
+  @@map("document_request_details")
+}
+
+model ProfileChangeRequestDetail {
+  requestId String    @id
+  /// Array of { field, label, currentValue, proposedValue } captured at submit time.
+  changes   Json
+  appliedAt DateTime?
+
+  request Request @relation(fields: [requestId], references: [id], onDelete: Cascade)
+
+  @@map("profile_change_request_details")
+}
+
+// ---------------------------------------------------------------------------
+// Cross-cutting
+// ---------------------------------------------------------------------------
+
+model Notification {
+  id         String           @id @default(cuid())
+  userId     String
+  type       NotificationType
+  title      String
+  body       String
+  entityType String?
+  entityId   String?
+  isRead     Boolean          @default(false)
+  readAt     DateTime?
+  createdAt  DateTime         @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead])
+  @@index([createdAt])
+  @@map("notifications")
+}
+
+model AuditLog {
+  id          String      @id @default(cuid())
+  actorUserId String?
+  /// Snapshot of the actor email and role so the trail survives user deletion.
+  actorLabel  String
+  action      AuditAction
+  entityType  String
+  entityId    String?
+  summary     String
+  before      Json?
+  after       Json?
+  ipAddress   String?
+  userAgent   String?
+  createdAt   DateTime    @default(now())
+
+  actor User? @relation(fields: [actorUserId], references: [id], onDelete: SetNull)
+
+  @@index([entityType, entityId])
+  @@index([actorUserId])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
