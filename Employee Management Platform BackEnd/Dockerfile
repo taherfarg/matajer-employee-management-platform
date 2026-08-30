@@ -27,6 +27,11 @@ FROM node:22-alpine AS runtime
 WORKDIR /app
 ENV NODE_ENV=production
 
+# The prisma CLI is a runtime dependency, not a dev one: the container runs
+# `prisma migrate deploy` on every start. Leaving it in devDependencies made
+# `npx` fetch it from the network at container start, as a non-root user - a
+# deploy that silently depends on the network being up at exactly the wrong
+# moment, and the cause of intermittent boot failures.
 COPY package*.json ./
 RUN npm ci --omit=dev && npm cache clean --force
 
@@ -42,4 +47,6 @@ EXPOSE 4000
 
 # `migrate deploy` applies any pending migrations before the API accepts
 # traffic, so a deploy never serves requests against an outdated schema.
-CMD ["sh", "-c", "npx prisma migrate deploy && node dist/server.js"]
+# ./node_modules/.bin, not npx: resolve the pinned local binary and never reach
+# for the network at start-up.
+CMD ["sh", "-c", "./node_modules/.bin/prisma migrate deploy && node dist/server.js"]
