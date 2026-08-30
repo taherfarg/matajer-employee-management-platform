@@ -8,6 +8,10 @@
 # plan, so the database lives on Neon (free, no expiry) and is supplied through
 # DATABASE_URL. See DEPLOYMENT.md for the ten-minute walkthrough.
 #
+# Region is singapore to match the Neon database (ap-southeast-1). Keeping the
+# API and the database on the same continent matters: every request makes
+# several round trips, and a cross-hemisphere hop shows up as visible lag.
+#
 # Apply with: Render Dashboard -> New -> Blueprint -> point at this repository.
 
 services:
@@ -15,7 +19,7 @@ services:
     name: ems-api
     runtime: docker
     plan: free
-    region: frankfurt
+    region: singapore
     # Quoted because the directory name contains spaces.
     rootDir: "Employee Management Platform BackEnd"
     dockerfilePath: ./Dockerfile
