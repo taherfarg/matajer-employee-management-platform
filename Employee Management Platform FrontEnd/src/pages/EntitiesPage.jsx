@@ -190,7 +190,12 @@ function EntityDetail({ entityId, onClose, cost }) {
                     <span className="dept-dot" style={{ background: entity.color }} />
                     <span>
                       <strong>{row.name}</strong>
-                      <small>{row.headcount} employees</small>
+                      {/* Share of the entity, not a repeat of the count on the right. */}
+                      <small>
+                        {entity.stats.headcount
+                          ? `${Math.round((row.headcount / entity.stats.headcount) * 100)}% of the entity`
+                          : ''}
+                      </small>
                     </span>
                     <b>{row.headcount}</b>
                   </div>
