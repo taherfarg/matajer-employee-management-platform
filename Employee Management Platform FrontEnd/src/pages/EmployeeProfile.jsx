@@ -206,6 +206,18 @@ export default function EmployeeProfile({ session, onToast }) {
                       {document.category.replace('_', ' ').toLowerCase()}
                       {document.issuedOn ? ` · issued ${formatDate(document.issuedOn)}` : ''}
                     </small>
+                    {/*
+                      Letters are stored as text and can be read here. Everything
+                      else is a record of a document held elsewhere - say so,
+                      rather than leaving a row that looks clickable and is not.
+                    */}
+                    {document.category === 'LETTER' ? (
+                      <button type="button" className="text-button" onClick={(event) => { event.stopPropagation(); setLetterId(document.id) }}>
+                        Read letter
+                      </button>
+                    ) : (
+                      <small className="muted">No file attached — held outside the platform</small>
+                    )}
                   </span>
                   {document.expiresOn && (
                     <StatusPill status={document.isExpired ? 'Rejected' : 'Approved'}>

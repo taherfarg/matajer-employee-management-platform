@@ -261,6 +261,16 @@ export async function fetchMyTimeline() {
   return adaptTimeline(response.data)
 }
 
+/**
+ * A manager's direct reports, resolved from the token rather than from an id in
+ * the URL. The API returns them at MANAGER view level: working context, never
+ * compensation.
+ */
+export async function fetchMyTeam() {
+  const response = await api.get('/me/team')
+  return adaptEmployees(response.data)
+}
+
 // --- Dashboard, notifications and audit -----------------------------------
 
 export async function fetchDashboard() {

@@ -103,7 +103,15 @@ The seeded database contains 3 legal entities, 18 employee records, 40 requests,
 
 ## Verification
 
-The production frontend build passes with `npm run build`. The backend passes TypeScript checking and its integration suite against a separate test database. Real-browser verification covers:
+The production frontend build passes with `npm run build`, and 34 unit tests cover the adapters, the HTTP client and the formatters. The backend passes TypeScript checking and its 118-test integration suite against a separate test database.
+
+UI behaviour is covered by the committed Playwright acceptance suite in [`e2e/`](../e2e) — 38 cases against the real frontend, the real API and a real PostgreSQL database, at 1440×900 and 390×844:
+
+```bash
+cd e2e && npm install && npx playwright install chromium && npm test
+```
+
+That suite covers:
 
 - Admin and employee login and role-specific navigation
 - Live dashboard and server-side directory search
@@ -125,9 +133,4 @@ See the backend [`README.md`](../Employee%20Management%20Platform%20BackEnd/READ
 
 ## AI usage and cost log
 
-| Tool | Use | Approximate incremental project spend |
-|---|---|---:|
-| OpenAI Codex | Product interpretation, implementation, integration, and review | $0 using existing access |
-| Playwright CLI | Real-browser desktop/mobile and workflow QA | $0 |
-
-Approximate total incremental spend: **$0**.
+The project-wide log is [`AI-USAGE-LOG.md`](../AI-USAGE-LOG.md) at the repository root — that is the single source of truth for tools used and spend.

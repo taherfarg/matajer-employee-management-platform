@@ -413,11 +413,12 @@ All names, addresses, phone numbers, registration numbers and salaries are inven
 npm test
 ```
 
-**106 tests across 5 files, all passing.** They run against the separate test database on port 5434 — `npm test` can never touch the demo data.
+**118 tests across 6 files, all passing.** They run against the separate test database on port 5434 — `npm test` can never touch the demo data.
 
 | File | Covers |
 |---|---|
 | `working-days.test.ts` | Pure unit tests of the leave arithmetic: differing working weeks, holidays on and off working days, half days at each end, single-day half days, empty and inverted ranges |
+| `letters.test.ts` | Letter templates in both languages, the salary-privacy guard and its money detector, and the fallback that runs when no `GOOGLE_API_KEY` is configured |
 | `auth.test.ts` | Login, development-origin CORS, account enumeration resistance, refresh rotation, replay detection, lockout after 5 failures, password change, immediate effect of deactivation |
 | `access-control.test.ts` | The full privacy matrix — the tests that would catch a serializer regression or a dropped access check |
 | `request-workflows.test.ts` | All three workflows end to end, including balance hold/deduct/release and every rejection path |

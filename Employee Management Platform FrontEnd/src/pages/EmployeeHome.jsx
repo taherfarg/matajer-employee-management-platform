@@ -261,7 +261,9 @@ export default function EmployeeHome({ session, onNavigate, onToast }) {
         <section className="panel panel-padded reveal">
           <div className="panel-header">
             <div>
-              <p className="eyebrow">Team</p>
+              {/* Scope is the legal entity, not a reporting line - the label has
+                  to say so, or a manager reads it as their own team's status. */}
+              <p className="eyebrow">Your entity</p>
               <h2>Away today</h2>
             </div>
             <span className="count-badge">{data.teamOnLeaveToday?.length ?? 0}</span>

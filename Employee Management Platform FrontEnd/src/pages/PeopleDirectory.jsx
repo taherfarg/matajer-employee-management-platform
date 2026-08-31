@@ -34,7 +34,7 @@ import {
 } from '../components/ui.jsx'
 import { useDebouncedValue, useResource } from '../hooks/useResource.js'
 import { useOrg } from '../hooks/useOrg.jsx'
-import { formatDate, formatMoney, todayIso } from '../lib/format.js'
+import { formatDate, formatMoney, plural, todayIso } from '../lib/format.js'
 import { EMPLOYEE_STATUS_VALUES } from '../api/adapters.js'
 import {
   CONTRACT_TYPE_OPTIONS,
@@ -113,7 +113,7 @@ export default function PeopleDirectory({ onToast }) {
         <div className="directory-count">
           <strong>{meta.total}</strong>
           <span>
-            people across <b>{entities.length} entities</b>
+            {meta.total === 1 ? 'person' : 'people'} across <b>{plural(entities.length, 'entity', 'entities')}</b>
           </span>
         </div>
         <button className="button button-primary" onClick={() => setAdding(true)}>
@@ -226,7 +226,7 @@ export default function PeopleDirectory({ onToast }) {
                         <EntityBadge entityId={employee.entityId} entityCode={employee.entityCode} entityName={employee.entityName} full />
                       </td>
                       <td>
-                        <strong>{formatDate(employee.joinDate, { year: undefined })}</strong>
+                        <strong>{formatDate(employee.joinDate)}</strong>
                         <small>{employee.employmentType}</small>
                       </td>
                       <td>
@@ -809,7 +809,8 @@ function EmployeeForm({ employee, departments, entities, onCancel, onSaved, onTo
     managerId: employee?.managerId ?? '',
     employmentType: employee?.employmentTypeValue ?? 'FULL_TIME',
     contractType: employee?.contractTypeValue ?? 'UNLIMITED',
-    workMode: 'ONSITE',
+    workMode: employee?.workModeValue ?? 'ONSITE',
+    // Only sent when creating; on edit, status has its own endpoint.
     status: 'PROBATION',
     hireDate: employee?.joinDate ?? todayIso(),
     contractEndDate: employee?.contractEnd ?? '',

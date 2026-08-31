@@ -39,6 +39,19 @@ export const formatDays = (value) => {
   return `${rounded} day${days === 1 ? '' : 's'}`
 }
 
+/**
+ * Counted noun with the right ending: `plural(1, 'entity', 'entities')` gives
+ * "1 entity". Irregular plurals take the third argument; regular ones just get
+ * an "s". Half days count as plural ("0.5 working days"), which is how people
+ * say it.
+ */
+export const plural = (count, singular, pluralForm) => {
+  const n = Number(count ?? 0)
+  const shown = Number.isInteger(n) ? n : n.toFixed(1)
+  const word = n === 1 ? singular : (pluralForm ?? `${singular}s`)
+  return `${shown} ${word}`
+}
+
 /** Coarse relative time for activity feeds - precision is not the point there. */
 export const relativeTime = (value) => {
   if (!value) return ''

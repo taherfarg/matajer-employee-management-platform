@@ -94,7 +94,11 @@ export async function listLegalEntities(auth: AuthContext): Promise<unknown[]> {
   const entities = await prisma.legalEntity.findMany({
     where: scope ? { id: scope } : {},
     orderBy: { name: 'asc' },
-    include: { _count: { select: { employees: true } } },
+    // Current headcount, not lifetime: an offboarded person still points at the
+    // entity, so an unfiltered count made this card disagree with the dashboard,
+    // the directory and this entity's own detail page - all of which already
+    // exclude them.
+    include: { _count: { select: { employees: { where: { status: { not: 'OFFBOARDED' } } } } } },
   });
 
   return entities.map((entity) => serializeEntity(entity, entity._count.employees));

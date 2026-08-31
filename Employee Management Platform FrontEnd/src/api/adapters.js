@@ -7,6 +7,8 @@
  * and the human labels for the API's SCREAMING_CASE enums.
  */
 
+import { plural } from '../lib/format.js'
+
 // --- Enum labels ----------------------------------------------------------
 // The label strings double as CSS modifiers via StatusPill, which lowercases
 // them and replaces spaces with hyphens (Active -> .status-active).
@@ -189,6 +191,11 @@ export function adaptEmployee(raw) {
     employmentType: EMPLOYMENT_TYPE_LABELS[raw.employmentType] ?? raw.employmentType,
     employmentTypeValue: raw.employmentType,
     workMode: WORK_MODE_LABELS[raw.workMode] ?? raw.workMode,
+    // The raw enum alongside the label, matching employmentTypeValue and
+    // contractTypeValue. Without it the edit form had no value to bind to and
+    // fell back to a hardcoded 'ONSITE', silently overwriting REMOTE/HYBRID on
+    // every unrelated save.
+    workModeValue: raw.workMode,
     location: raw.legalEntity?.name ?? '',
 
     managerId: raw.manager?.id ?? null,
@@ -314,7 +321,7 @@ export function adaptRequest(raw) {
       appliedAt: raw.profileChange.appliedAt,
       purpose: Array.isArray(changes) && changes.length
         ? changes.map((change) => change.label).join(', ')
-        : `${raw.profileChange.changeCount ?? 0} field(s)`,
+        : plural(raw.profileChange.changeCount ?? 0, 'field'),
     }
   }
 

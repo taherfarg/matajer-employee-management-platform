@@ -93,7 +93,21 @@ export async function listLeaveTypes(
   auth: AuthContext,
   filters: { legalEntityId?: string; includeInactive?: boolean },
 ): Promise<unknown[]> {
-  const entityId = filters.legalEntityId ?? scopedEntityId(auth) ?? undefined;
+  /**
+   * Who gets to see which entity's policy:
+   *
+   *  - An employee or manager only ever sees their own entity's types plus the
+   *    company-wide ones. Without this they were offered every entity's leave
+   *    types at once - four near-identical "Annual Leave" options in the request
+   *    form, three of which the submit endpoint then rejects as belonging to
+   *    another legal entity.
+   *  - A scoped HR_ADMIN is pinned to their scope; a filter cannot widen it.
+   *  - A global ADMIN may filter freely, or see everything.
+   */
+  const scope = scopedEntityId(auth);
+  const entityId = isManagement(auth)
+    ? (scope ?? filters.legalEntityId ?? undefined)
+    : (auth.legalEntityId ?? undefined);
 
   const types = await prisma.leaveType.findMany({
     where: {

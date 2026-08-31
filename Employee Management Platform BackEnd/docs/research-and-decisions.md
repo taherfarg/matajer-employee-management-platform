@@ -109,7 +109,7 @@ Recorded rather than escalated, per the brief's instruction to decide and docume
 
 ### In the MVP
 
-Multi-entity organisation with per-country policy · employee directory with search, filter, sort and pagination · full employee profile with three permission-scoped views · employee creation with optional login and pro-rated leave balances · dated compensation history behind its own permission gate · employment timeline · three self-service workflows end to end · unified approval inbox · leave policy, holidays, balances and shared calendar · document records with expiry tracking · management dashboard, alerts and currency-safe payroll overview · in-app notifications · immutable audit trail · four roles with entity scoping · 105 automated tests.
+Multi-entity organisation with per-country policy · employee directory with search, filter, sort and pagination · full employee profile with three permission-scoped views · employee creation with optional login and pro-rated leave balances · dated compensation history behind its own permission gate · employment timeline · three self-service workflows end to end · unified approval inbox · leave policy, holidays, balances and shared calendar · document records with expiry tracking · management dashboard, alerts and currency-safe payroll overview · in-app notifications · immutable audit trail · four roles with entity scoping · 152 automated backend and frontend tests, plus a 38-case Playwright acceptance suite.
 
 ### Next phase
 

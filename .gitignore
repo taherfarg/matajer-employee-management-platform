@@ -14,11 +14,21 @@ build/
 
 # Tooling scratch
 .playwright-cli/
+.playwright-mcp/
 output/
 coverage/
 .vite/
 *.log
 npm-debug.log*
+
+# End-to-end run artefacts (reports, traces, videos, screenshots)
+e2e/test-results/
+e2e/playwright-report/
+e2e/blob-report/
+playwright/.cache/
+
+# The private assessment brief is not ours to publish.
+Taher_Employee_Management_AI_Product_Engineering_Challenge.pdf
 
 # OS / editor
 .DS_Store

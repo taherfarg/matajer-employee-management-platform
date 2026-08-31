@@ -3,7 +3,7 @@
 What was built, and the decisions behind it.
 
 **Stack:** React + Vite (frontend) · Express + TypeScript + Prisma (API) · PostgreSQL · JWT auth
-**Scale:** ~16,500 lines · 152 automated tests · 3 legal entities · 18 demo employees · 40 demo requests
+**Scale:** ~16,500 lines · 152 automated tests (118 backend · 34 frontend) plus a 38-case Playwright acceptance suite · 3 legal entities · 18 demo employees · 40 demo requests
 
 ---
 
@@ -119,8 +119,8 @@ Payroll cost is reported **grouped by currency and never summed across them**. A
 ## Honest limitations
 
 - **Documents are metadata plus a URL.** No binary upload or object storage; seeded file URLs point at a `.demo` host that does not resolve.
-- **The AI letter path is unverified against the live API.** The template fallback is fully tested; the Gemini call itself has not been exercised because no API key was available on the build machine. The code path is typechecked against the SDK's real type definitions and the fallback is proven, but the round trip has not been run.
+- **The AI letter path is verified, but only manually.** Both branches have been exercised against a running system: with a real `GOOGLE_API_KEY` configured, Gemini drafts the letter and the record is flagged `isAiGenerated: true`; with the key removed, the same approval produces the deterministic template and is flagged `false`. Neither the automated suites nor CI make a live model call — they force the key empty on purpose, so the model round trip is not covered by a regression test and would not catch an SDK or API change.
 - **Public holidays are illustrative.** Islamic holidays move with lunar observation; production would source them per country from an official calendar.
 - **The headcount trend is computed in memory.** Fine at this scale; past a few thousand employees it should move into SQL.
 - **Rate limiting is in-process.** Fine for one instance; multi-instance would need Redis.
-- **Frontend coverage is logic-level, not component-level.** The 34 frontend tests cover the adapters, the HTTP client and the formatters. UI behaviour was verified by driving a real browser, not by automated component tests.
+- **Frontend coverage is logic-level, not component-level.** The 34 frontend tests cover the adapters, the HTTP client and the formatters. There are no component unit tests; UI behaviour is covered instead by the 38-case Playwright acceptance suite in [`e2e/`](e2e/), which drives the real app against the real API and database at both 1440×900 and 390×844.

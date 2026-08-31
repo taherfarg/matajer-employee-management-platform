@@ -34,6 +34,7 @@ import EntitiesPage from './pages/EntitiesPage.jsx'
 import EmployeeHome from './pages/EmployeeHome.jsx'
 import EmployeeProfile from './pages/EmployeeProfile.jsx'
 import EmployeeRequests from './pages/EmployeeRequests.jsx'
+import ManagerTeam from './pages/ManagerTeam.jsx'
 
 const NAV_BY_ROLE = {
   admin: [
@@ -49,6 +50,18 @@ const NAV_BY_ROLE = {
   ],
 }
 
+/**
+ * A line manager gets the employee workspace plus their team. The extra
+ * destination is added here rather than as a third role list, because a manager
+ * is an employee first - they still book their own leave.
+ */
+const MANAGER_NAV_ITEM = { id: 'my-team', label: 'My team', icon: UsersRound }
+
+function navFor(session) {
+  const base = NAV_BY_ROLE[session.role]
+  return session.isManager ? [...base, MANAGER_NAV_ITEM] : base
+}
+
 const PAGE_META = {
   overview: ['Overview', 'What needs your attention across the organization.'],
   people: ['People directory', 'A single source of truth for every employee and legal entity.'],
@@ -57,6 +70,7 @@ const PAGE_META = {
   home: ['Home', 'Everything about your work, requests, and time off in one place.'],
   profile: ['My profile', 'Your personal and employment information.'],
   'my-requests': ['My requests', 'Submit a request and follow it through to a clear decision.'],
+  'my-team': ['My team', 'Your direct reports, and the requests waiting on your decision.'],
 }
 
 export default function App() {
@@ -211,10 +225,12 @@ function Workspace({ session }) {
 
         <main id="main-content" className="main-content">
           {session.role === 'admin' && page === 'overview' && (
-            <AdminOverview onNavigate={navigate} onToast={showToast} />
+            <AdminOverview onNavigate={navigate} onToast={showToast} onDecided={pendingBadge.reload} />
           )}
           {session.role === 'admin' && page === 'people' && <PeopleDirectory onToast={showToast} />}
-          {session.role === 'admin' && page === 'requests' && <AdminRequests onToast={showToast} />}
+          {session.role === 'admin' && page === 'requests' && (
+            <AdminRequests onToast={showToast} onDecided={pendingBadge.reload} />
+          )}
           {session.role === 'admin' && page === 'entities' && <EntitiesPage />}
 
           {session.role === 'employee' && page === 'home' && (
@@ -224,6 +240,7 @@ function Workspace({ session }) {
             <EmployeeProfile session={session} onToast={showToast} />
           )}
           {session.role === 'employee' && page === 'my-requests' && <EmployeeRequests onToast={showToast} />}
+          {session.isManager && page === 'my-team' && <ManagerTeam session={session} onToast={showToast} />}
         </main>
       </div>
 
@@ -240,7 +257,7 @@ function Workspace({ session }) {
 
 function Sidebar({ session, page, onNavigate, onLogout, onSecurity, open, onClose, pendingCount }) {
   const user = session.employee
-  const items = NAV_BY_ROLE[session.role]
+  const items = navFor(session)
 
   return (
     <>

@@ -789,10 +789,10 @@ table { border-collapse: collapse; }
   .table-caption span:last-child { display: none; }
   .people-table-wrap { display: none; }
   .mobile-people-list, .mobile-request-list { display: grid; }
-  .mobile-person-card { min-height: 79px; padding: 12px; display: grid; grid-template-columns: 46px 1fr auto; align-items: center; gap: 10px; text-align: left; border-bottom: 1px solid var(--line); }
+  .mobile-person-card { min-height: 92px; padding: 12px; display: grid; grid-template-columns: 46px 1fr auto; align-items: center; gap: 10px; text-align: left; border-bottom: 1px solid var(--line); }
   .mobile-person-card > span { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
-  .mobile-person-card strong { font-size: 11px; }
-  .mobile-person-card small { color: var(--muted); font-size: 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .mobile-person-card strong { font-size: 15px; }
+  .mobile-person-card small { color: var(--muted); font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .mobile-person-card > .status-pill { grid-column: 2; margin-top: -15px; }
   .mobile-person-card > svg { grid-column: 3; grid-row: 1; color: var(--muted); }
   .modal-backdrop { padding: 0; place-items: end center; }
@@ -815,8 +815,8 @@ table { border-collapse: collapse; }
   .mobile-request-card { position: relative; padding: 14px; display: grid; grid-template-columns: 1fr auto; gap: 9px; text-align: left; border-bottom: 1px solid var(--line); }
   .mobile-request-card > div:first-child { display: flex; align-items: center; gap: 9px; }
   .mobile-request-card > div:first-child span { display: flex; flex-direction: column; gap: 2px; }
-  .mobile-request-card strong { font-size: 10px; }
-  .mobile-request-card small, .mobile-request-card p { color: var(--muted); font-size: 8px; }
+  .mobile-request-card strong { font-size: 15px; }
+  .mobile-request-card small, .mobile-request-card p { color: var(--muted); font-size: 13px; }
   .mobile-request-card p { grid-column: 1 / -1; }
   .mobile-request-card > svg { position: absolute; right: 11px; bottom: 12px; color: var(--muted); }
   .entity-intro { align-items: flex-start; flex-direction: column; padding: 23px; }

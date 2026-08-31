@@ -22,7 +22,7 @@ import {
 } from 'lucide-react'
 import { Async, Avatar, EmptyMini, ErrorState, LoadingState, StatusPill } from '../components/ui.jsx'
 import { useResource } from '../hooks/useResource.js'
-import { formatDate, relativeTime } from '../lib/format.js'
+import { formatDate, plural, relativeTime } from '../lib/format.js'
 import {
   approveRequest,
   fetchAuditLogs,
@@ -32,7 +32,7 @@ import {
   rejectRequest,
 } from '../api/endpoints.js'
 
-export default function AdminOverview({ onNavigate, onToast }) {
+export default function AdminOverview({ onNavigate, onToast, onDecided }) {
   const dashboard = useResource(() => fetchDashboard(), [])
   const pendingQueue = useResource(() => fetchRequests({ status: 'PENDING', pageSize: 4 }), [])
   const recentHires = useResource(
@@ -53,10 +53,12 @@ export default function AdminOverview({ onNavigate, onToast }) {
         await rejectRequest(request.id, 'Unable to approve this request at this time.')
         onToast(`${request.reference} rejected.`)
       }
-      // The decision changes both the queue and the dashboard counters.
+      // The decision changes the queue, the dashboard counters and the sidebar
+      // pending badge, which lives in App.
       pendingQueue.reload()
       dashboard.reload()
       auditTrail.reload()
+      onDecided?.()
     } catch (error) {
       onToast(error.detailSummary || error.message, 'error')
     } finally {
@@ -221,7 +223,7 @@ export default function AdminOverview({ onNavigate, onToast }) {
           <div className="workforce-foot">
             <Globe2 size={18} />
             <span>
-              <strong>{entityStats.length} legal entities</strong>
+              <strong>{plural(entityStats.length, 'legal entity', 'legal entities')}</strong>
               <small>One consistent people data model</small>
             </span>
             <span className="data-health">
@@ -261,7 +263,7 @@ export default function AdminOverview({ onNavigate, onToast }) {
                         ? `${request.days} days`
                         : request.typeValue === 'DOCUMENT'
                           ? request.language
-                          : `${request.changeCount} field(s)`}
+                          : plural(request.changeCount, 'field')}
                     </span>
                   </div>
                   <div className="quick-actions">

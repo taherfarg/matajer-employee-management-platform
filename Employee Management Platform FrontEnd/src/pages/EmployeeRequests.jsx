@@ -3,7 +3,7 @@ import { CalendarDays, ClipboardCheck, FileText, Plane, UserRound, X } from 'luc
 import { Async, FormError, Spinner, StatusPill } from '../components/ui.jsx'
 import RequestFormModal from '../components/RequestFormModal.jsx'
 import { useResource } from '../hooks/useResource.js'
-import { formatDate } from '../lib/format.js'
+import { formatDate, plural } from '../lib/format.js'
 import { cancelRequest, fetchMyBalances, fetchMyProfile, fetchMyRequests } from '../api/endpoints.js'
 
 const FILTERS = [
@@ -154,12 +154,12 @@ export default function EmployeeRequests({ onToast }) {
 
 function describe(request) {
   if (request.typeValue === 'LEAVE') {
-    return `${formatDate(request.startDate)} — ${formatDate(request.endDate)} · ${request.days} working days`
+    return `${formatDate(request.startDate)} — ${formatDate(request.endDate)} · ${plural(request.days, 'working day')}`
   }
   if (request.typeValue === 'DOCUMENT') {
     return `${request.purpose ?? 'Document request'} · ${request.language}`
   }
   return Array.isArray(request.changes) && request.changes.length
     ? request.changes.map((change) => change.label).join(', ')
-    : `${request.changeCount ?? 0} field(s) proposed`
+    : `${plural(request.changeCount ?? 0, 'field')} proposed`
 }

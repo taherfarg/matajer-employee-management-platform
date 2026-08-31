@@ -30,7 +30,7 @@ import {
 } from '../components/ui.jsx'
 import LetterModal from '../components/LetterModal.jsx'
 import { useResource } from '../hooks/useResource.js'
-import { formatDate, formatTime } from '../lib/format.js'
+import { formatDate, formatTime, plural } from '../lib/format.js'
 import { approveRequest, fetchRequest, fetchRequests, rejectRequest } from '../api/endpoints.js'
 
 const STATUS_TABS = [
@@ -48,7 +48,7 @@ const TYPE_OPTIONS = [
   { label: 'Profile change', value: 'PROFILE_CHANGE' },
 ]
 
-export default function AdminRequests({ onToast }) {
+export default function AdminRequests({ onToast, onDecided }) {
   const [status, setStatus] = useState('PENDING')
   const [type, setType] = useState('')
   const [selectedId, setSelectedId] = useState(null)
@@ -212,7 +212,11 @@ export default function AdminRequests({ onToast }) {
       <RequestDetail
         requestId={selectedId}
         onClose={() => setSelectedId(null)}
-        onDecided={() => inbox.reload()}
+        onDecided={() => {
+          inbox.reload()
+          // The sidebar pending badge lives in App, so it has to be told too.
+          onDecided?.()
+        }}
         onToast={onToast}
       />
     </div>
@@ -220,9 +224,9 @@ export default function AdminRequests({ onToast }) {
 }
 
 function describeRequest(request) {
-  if (request.typeValue === 'LEAVE') return `${request.days} working days`
+  if (request.typeValue === 'LEAVE') return plural(request.days, 'working day')
   if (request.typeValue === 'DOCUMENT') return request.purpose ?? 'Document request'
-  return `${request.changeCount ?? 0} field(s) proposed`
+  return `${plural(request.changeCount ?? 0, 'field')} proposed`
 }
 
 function describeRequestMeta(request) {
@@ -312,7 +316,7 @@ function RequestDetail({ requestId, onClose, onDecided, onToast }) {
                   label="Dates"
                   value={`${formatDate(request.startDate)} — ${formatDate(request.endDate)}`}
                 />
-                <RequestFact icon={Clock3} label="Chargeable" value={`${request.days} working days`} />
+                <RequestFact icon={Clock3} label="Chargeable" value={plural(request.days, 'working day')} />
                 <RequestFact icon={Plane} label="Leave type" value={request.subtype} />
                 <RequestFact icon={Building2} label="Entity calendar" value={request.employee?.entityName} />
               </>
