@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { CalendarDays, CheckCircle2, ChevronRight, FileText, UserRound, UsersRound } from 'lucide-react'
+import { CalendarDays, CheckCircle2, FileText, UserRound, UsersRound, X } from 'lucide-react'
 import { Async, Avatar, EntityBadge, RequestFact, StatusPill } from '../components/ui.jsx'
 import { useResource } from '../hooks/useResource.js'
 import { formatDate, plural } from '../lib/format.js'
@@ -83,15 +83,15 @@ export default function ManagerTeam({ session, onToast }) {
         <Async loading={team.loading} error={team.error} onRetry={team.reload} rows={4}>
           <div className="notable-list">
             {reports.map((person) => (
-              <div className="notable-row" key={person.id}>
+              <div className="notable-person" key={person.id}>
                 <Avatar employee={person} size="sm" />
-                <span>
+                <div>
                   <strong>{person.fullName}</strong>
-                  <small>
+                  <span>
                     {person.role} · {person.department}
                     {person.joinDate ? ` · joined ${formatDate(person.joinDate)}` : ''}
-                  </small>
-                </span>
+                  </span>
+                </div>
                 <EntityBadge entityId={person.entityId} entityCode={person.entityCode} entityName={person.entityName} />
                 <StatusPill status={person.status} />
               </div>
@@ -124,28 +124,28 @@ export default function ManagerTeam({ session, onToast }) {
             {pending.map((request) => {
               const isOwn = request.employee?.id === selfId
               return (
-                <div className="notable-row" key={request.id}>
+                <div className="notable-person team-approval" key={request.id}>
                   <Avatar employee={request.employee} size="sm" />
-                  <span>
+                  <div>
                     <strong>{request.employee?.fullName}</strong>
-                    <small>
+                    <span>
                       {request.subtype} · {request.reference}
                       {request.typeValue === 'LEAVE' ? ` · ${plural(request.days, 'working day')}` : ''}
-                    </small>
-                  </span>
+                    </span>
+                  </div>
                   {isOwn ? (
                     // Nobody decides their own request, including a manager. The
-                    // API refuses it; showing why is better than a dead button.
-                    <small className="muted">Your own request — HR will decide</small>
+                    // API refuses it; saying why beats a button that would fail.
+                    <span className="team-approval-self">Your own request — HR decides</span>
                   ) : (
-                    <div className="row-actions">
+                    <div className="team-approval-actions">
                       <button
                         className="icon-button approve"
                         disabled={decidingId === request.id}
                         onClick={() => decide(request, 'approve')}
                         aria-label={`Approve ${request.reference}`}
                       >
-                        <CheckCircle2 size={17} />
+                        <CheckCircle2 size={16} />
                       </button>
                       <button
                         className="icon-button reject"
@@ -153,7 +153,7 @@ export default function ManagerTeam({ session, onToast }) {
                         onClick={() => decide(request, 'reject')}
                         aria-label={`Reject ${request.reference}`}
                       >
-                        <ChevronRight size={17} />
+                        <X size={16} />
                       </button>
                     </div>
                   )}

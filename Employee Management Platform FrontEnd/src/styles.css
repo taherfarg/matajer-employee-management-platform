@@ -1348,3 +1348,9 @@ table { border-collapse: collapse; }
 .avatar-md { font-size: 13px !important; }
 .avatar-lg { font-size: 17px !important; }
 .avatar-xl { font-size: 22px !important; }
+
+/* Manager team approvals: the row keeps the shared .notable-person grid, but its
+   third column holds a pair of decision buttons rather than a status pill. */
+.team-approval { grid-template-columns: 36px 1fr auto; }
+.team-approval-actions { display: flex; align-items: center; gap: 6px; }
+.team-approval-self { font-size: 8px; color: var(--muted); white-space: nowrap; }
